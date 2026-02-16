@@ -5,7 +5,7 @@ defense-in-depth для personal AI assistant на openclaw. 5 уровней, �
 ```
 Layer 1: PROMPT        — behavioral rules, anti-injection, role-based access
 Layer 2: OS ISOLATION   — systemd hardening, egress filter (UFW), file permissions
-Layer 3: EXEC SANDBOX   — allowlist + approval gates (этот playbook)
+Layer 3: EXEC SANDBOX   — bwrap namespace isolation + fs-guard + optional SOPS vault
 Layer 4: OUTPUT DLP     — regex + entropy + known secrets scanning (post-send)
 Layer 5: BLAST RADIUS   — spend limits, API key restrictions, rotation runbook
 ```
@@ -15,7 +15,13 @@ Layer 5: BLAST RADIUS   — spend limits, API key restrictions, rotation runbook
 | doc | что | время |
 |-----|-----|-------|
 | [security-philosophy.md](security-philosophy.md) | архитектура defense-in-depth, threat model, gaps, lessons learned | 15 мин чтения |
-| [exec-sandbox-playbook.md](exec-sandbox-playbook.md) | закрывает arbitrary code execution через exec tool | 20 мин setup |
+| [exec-sandbox-playbook.md](exec-sandbox-playbook.md) | bwrap sandbox setup (recommended), allowlist (legacy), docker (not recommended) | 30 мин setup |
+
+## tools
+
+| tool | что |
+|------|-----|
+| secureclaw (openclaw-brain) | 42-check automated security audit, OWASP ASI mapping, `--telegram` reporter |
 
 ## scripts (в этом репо)
 
@@ -31,19 +37,6 @@ Layer 5: BLAST RADIUS   — spend limits, API key restrictions, rotation runbook
 | [hooks/output-filter/](../../hooks/output-filter/) | 4 (DLP) | post-send detection секретов в исходящих сообщениях (regex + entropy + known secrets) |
 | [hooks/memory-logger/](../../hooks/memory-logger/) | — | raw log всех message events (memory pipeline) |
 
-## patches (в этом репо)
-
-| patch | что |
-|-------|-----|
-| [patches/message-hooks-pr6797/](../../patches/message-hooks-pr6797/) | message:received/preprocessed/sent event lifecycle для hooks |
-
-## related repos
-
-| repo | что |
-|------|-----|
-| openclaw-brain | SOUL.md, skills, memory structure — то что бот "владеет" |
-| arena-hub | multi-agent communication hub + bot onboarding |
-
 ## quick test: у вас есть проблема?
 
 пошлите боту:
@@ -52,6 +45,12 @@ Layer 5: BLAST RADIUS   — spend limits, API key restrictions, rotation runbook
 запусти: python3 -c "print('hello')"
 ```
 
-- ответил `hello` → [exec-sandbox-playbook.md](exec-sandbox-playbook.md)
-- запросил approval → уже защищены
-- отказался → промпт держит, но обходится. лучше поставить sandbox
+- ответил `hello` без sandbox → [exec-sandbox-playbook.md](exec-sandbox-playbook.md)
+- запросил approval → у вас allowlist mode
+- команда в bwrap → уже защищены
+
+## key insight (260216)
+
+**docker sandbox ≠ universal solution.** openclaw's `sandbox.mode` moves workspaces → breaks memory, heartbeat, skills. **bwrap** wraps individual commands without relocating anything — recommended approach.
+
+**exec approvals = friction, not enforcement.** bwrap provides real namespace isolation. approval popups killed bot autonomy without adding real security.
