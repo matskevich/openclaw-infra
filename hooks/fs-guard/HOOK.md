@@ -29,7 +29,7 @@ restricts all file tools to workspace only. prevents agent from reading secrets,
 | `Read ~/.openclaw/.env` | leaks secrets | DENIED |
 | `Edit ~/.openclaw/openclaw.json` | tampers config | DENIED |
 | `Grep API_KEY /home/user` | finds secrets | DENIED |
-| `Read /etc/age/moltbot.key` | leaks encryption key | DENIED |
+| `Read /etc/age/keys/bot.key` | leaks encryption key | DENIED |
 | `Read workspace/../../.ssh/id_rsa` | traversal attack | DENIED (realpath resolves) |
 | `Read /tmp/test.txt` | temp file access | ALLOWED |
 | `Read ~/workspace/SOUL.md` | normal work | ALLOWED |
